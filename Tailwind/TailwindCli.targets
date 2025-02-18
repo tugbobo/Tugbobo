@@ -1,0 +1,116 @@
+<!--TailwindCli v4+ for Blazor and ASP.NET Core 8+ by Dami Tugbobo-->
+<!--Modified from: https://gist.github.com/arkada38/74d2787b2fa092a723ba6892cc3b2ed1-->
+<Project>
+  <ItemGroup>
+    <AvailableItemName Include="TailwindCli" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="Tailwind/*" CopyToPublishDirectory="Never" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <!-- Replace 'latest' with version number in this format; v3.4.0 to download a specific version. -->
+    <TailwindCssVersion>latest</TailwindCssVersion>
+  </PropertyGroup>
+
+  <!-- If default architecture is set (AnyCPU), it defaults to an opinionated popular platform. Modify this if necessary. -->
+  <PropertyGroup>
+    <BinaryName Condition="'$(OS)' == 'Windows_NT' And ('$(Platform)' == 'x64' Or '$(Platform)' == 'AnyCPU')">tailwindcss-windows-x64.exe</BinaryName>
+    <BinaryName Condition="'$(OS)' == 'Windows_NT' And '$(Platform)' == 'ARM64'">tailwindcss-windows-arm64.exe</BinaryName>
+    <BinaryName Condition="$([MSBuild]::IsOSPlatform('OSX')) And '$(Platform)' == 'x64'">tailwindcss-macos-x64</BinaryName>
+    <BinaryName Condition="$([MSBuild]::IsOSPlatform('OSX')) And ('$(Platform)' == 'ARM64' Or '$(Platform)' == 'AnyCPU')">tailwindcss-macos-arm64</BinaryName>
+    <BinaryName Condition="$([MSBuild]::IsOSPlatform('Linux')) And ('$(Platform)' == 'x64' Or '$(Platform)' == 'AnyCPU')">tailwindcss-linux-x64</BinaryName>
+    <BinaryName Condition="$([MSBuild]::IsOSPlatform('Linux')) And '$(Platform)' == 'ARM64'">tailwindcss-linux-arm64</BinaryName>
+    <BinaryName Condition="$([MSBuild]::IsOSPlatform('Linux')) And '$(Platform)' == 'ARMv7'">tailwindcss-linux-armv7</BinaryName>
+  </PropertyGroup>
+  
+  <PropertyGroup>
+    <ScopedCssTargetName Condition="'$(TargetFramework)' == 'net8.0'">_GenerateScopedCssFiles</ScopedCssTargetName>
+    <ScopedCssTargetName Condition="'$(TargetFramework)' != 'net8.0'">GenerateScopedCssFiles</ScopedCssTargetName>
+
+    <GenerateScopedCssFilesExists Condition="$([System.String]::new('$(MSBuildAllTargets)').Contains('$(ScopedCssTargetName)'))">true</GenerateScopedCssFilesExists>
+  </PropertyGroup>
+
+  <Target Name="CheckIfTailwindCLIExists">
+    <PropertyGroup>
+      <CheckTailwindCliExists Condition="'$(OS)' == 'Windows_NT'">$(MSBuildThisFileDirectory)/$(BinaryName) -h &gt; NUL</CheckTailwindCliExists>
+      <CheckTailwindCliExists Condition="'$(OS)' != 'Windows_NT'">$(MSBuildThisFileDirectory)/$(BinaryName) -h &gt; /dev/null</CheckTailwindCliExists>
+    </PropertyGroup>
+
+    <Exec Command="$(CheckTailwindCliExists)" IgnoreExitCode="true" EchoOff="true">
+      <Output TaskParameter="ExitCode" PropertyName="ExitCode" />
+    </Exec>
+    <Message Importance="High" Text="Checking for the existence of the TailwindCSS CLI binary: $(BinaryName)" />
+
+    <PropertyGroup>
+      <TailwindCssDownloadPath Condition="'$(TailwindCssVersion)' == 'latest'">latest/download</TailwindCssDownloadPath>
+      <TailwindCssDownloadPath Condition="'$(TailwindCssVersion)' != 'latest'">download/$(TailwindCssVersion)</TailwindCssDownloadPath>
+    </PropertyGroup>
+
+    <Message
+      Importance="High"
+      Text="TailwindCSS CLI binary does not exist. Attempting to download $(BinaryName)..."
+      Condition="'$(ExitCode)' != '0' and '$(BinaryName)' != ''" />
+    <DownloadFile
+      SourceUrl="https://github.com/tailwindlabs/tailwindcss/releases/$(TailwindCssDownloadPath)/$(BinaryName)"
+      DestinationFolder="$(MSBuildThisFileDirectory)"
+      Condition="'$(ExitCode)' != '0' and '$(BinaryName)' != ''"
+      SkipUnchangedFiles="false">
+      <Output TaskParameter="DownloadedFile" ItemName="DownloadedTailwind" />
+    </DownloadFile>
+
+    <Exec Command="$(CheckTailwindCliExists)" IgnoreExitCode="true" EchoOff="true">
+      <Output TaskParameter="ExitCode" PropertyName="ExitCode" />
+    </Exec>
+
+    <Error Text="TailwindCSS Standalone CLI is required to build and run this project. To continue, please download $(BinaryName) from https://github.com/tailwindlabs/tailwindcss/releases/latest, add it to the Tailwind directory — $(MSBuildThisFileDirectory), and then restart your terminal or IDE." Condition="'$(ExitCode)' != '0'" />
+  </Target>
+
+  <Target Name="ProcessScopedCssFiles" AfterTargets="$(ScopedCssTargetName)">
+    <MSBuild Projects="$(MSBuildProjectFile)" Properties="CurrentScopedCssFile=%(_ScopedCssOutputs.Identity)" Targets="PostScopedCssCompile"></MSBuild>
+  </Target>
+
+  <Target Name="PostScopedCssCompile" AfterTargets="ProcessScopedCssFiles" DependsOnTargets="CheckIfTailwindCLIExists" Condition="$(CurrentScopedCssFile) != ''">
+    <Message Importance="High" Text="Building scoped css: $(BinaryName) -i $(CurrentScopedCssFile) -o $(CurrentScopedCssFile)" />
+
+    <Exec Command="$(BinaryName) -i $(CurrentScopedCssFile) -o $(CurrentScopedCssFile)" IgnoreExitCode="true" EchoOff="true" WorkingDirectory="$(MSBuildThisFileDirectory)">
+      <Output TaskParameter="ExitCode" PropertyName="ExitCode" />
+    </Exec>
+
+    <Error Text="Error via build scoped css" Condition="'$(ExitCode)' != '0'" />
+  </Target>
+
+  <Target Name="EnsureTailwindCliIsAvailable" DependsOnTargets="CheckIfTailwindCLIExists" Condition="'$(GenerateScopedCssFilesExists)' != 'true'">
+  </Target>
+
+  <Target Name="ProcessBlazorScopedCss" DependsOnTargets="$(ScopedCssTargetName)" Condition="'$(GenerateScopedCssFilesExists)' == 'true'">
+  </Target>
+
+  <Target Name="PrepareCssBuild" BeforeTargets="CoreBuild">
+    <CallTarget Targets="EnsureTailwindCliIsAvailable" Condition="'$(GenerateScopedCssFilesExists)' != 'true'" />
+    <CallTarget Targets="ProcessBlazorScopedCss" Condition="'$(GenerateScopedCssFilesExists)' == 'true'" />
+  </Target>
+
+  <Target Name="BuildCss" AfterTargets="PrepareCssBuild" Outputs="$(MSBuildProjectDirectory)/wwwroot/css/app.css">
+    <Message Importance="High" Text="Starting tailwindcss. This may take a while..." />
+    <Message Importance="High" Text="$(MSBuildThisFileDirectory)" />
+    <Message Importance="High" Text="$(BinaryName) -i input.css -o $(MSBuildProjectDirectory)/wwwroot/css/app.css" />
+
+    <!--Minify generated CSS for Release-->
+    <Exec Command="$(BinaryName) -i input.css -o $(MSBuildProjectDirectory)/wwwroot/css/app.css -m" Condition="'$(Configuration)' == 'Release'" IgnoreExitCode="true" EchoOff="true" WorkingDirectory="$(MSBuildThisFileDirectory)" EnvironmentVariables="NODE_ENV=production">
+      <Output TaskParameter="ExitCode" PropertyName="ExitCode" />
+    </Exec>
+
+    <Exec Command="$(BinaryName) -i input.css -o $(MSBuildProjectDirectory)/wwwroot/css/app.css" Condition="'$(Configuration)' != 'Release'" IgnoreExitCode="true" EchoOff="true" WorkingDirectory="$(MSBuildThisFileDirectory)" EnvironmentVariables="NODE_ENV=production">
+      <Output TaskParameter="ExitCode" PropertyName="ExitCode" />
+    </Exec>
+
+    <Error Text="Error via build css" Condition="'$(ExitCode)' != '0'" />
+  </Target>
+
+  <Target Name="PostStylesCssCompile" AfterTargets="Build">
+    <Message Importance="High" Text="You can run the following command for watch mode:" />
+    <Message Importance="High" Text="cd $(MSBuildThisFileDirectory) &amp;&amp; $(BinaryName) -i input.css -o $(MSBuildProjectDirectory)/wwwroot/css/app.css -w" />
+  </Target>
+</Project>

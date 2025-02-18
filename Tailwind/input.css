@@ -1,0 +1,3 @@
+@import url("https://rsms.me/inter/inter.css?display=swap");
+@import "tailwindcss" source("../");
+@import "./theme.css";
