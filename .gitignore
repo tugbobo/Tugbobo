@@ -366,5 +366,5 @@ FodyWeavers.xsd
 ##
 appsettings*.json
 dotnet-tools.json
-/wwwroot/css/app.css
+# /wwwroot/css/app.css
 /Tailwind/tailwindcss-windows-x64.exe
