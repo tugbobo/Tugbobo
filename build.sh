@@ -6,6 +6,7 @@ chmod +x dotnet-install.sh
 ./dotnet/dotnet --version
 
 # Download TailwindCSS binary
+mkdir -p Tailwind
 curl -L "https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64" -o Tailwind/tailwindcss-linux-x64
 chmod +x Tailwind/tailwindcss-linux-x64
 
