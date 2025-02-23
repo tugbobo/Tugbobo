@@ -90,7 +90,7 @@ chosenIndices.forEach((cellIndex, i) => {
     );
     svgElem.setAttribute(
         "class",
-        "w-full h-auto fill-current text-gray-300 dark:text-gray-600"
+        "w-full h-auto fill-current"
     );
     const useElem = document.createElementNS(
         "http://www.w3.org/2000/svg",

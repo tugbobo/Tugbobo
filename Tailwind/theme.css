@@ -7,8 +7,6 @@
         "cv04", "cv11";
     --font-sans--font-variation-settings: "opsz" 32;
 
-    --text-2xs: 0.625rem;
-    --color-sotiblue: oklch(0.5315 0.1193 238.8);
     --color-creamish: oklch(0.9888 0.0045 78.3);
     --color-brownish: oklch(0.3582 0.0312 60.66);
     --color-greenish: oklch(0.5102 0.0654 125.6);
